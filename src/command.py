@@ -12,7 +12,10 @@ class Circuit:
         self.list_nodes = list_nodes
         self.lamp_position = lamp_position
         self.redstone_locations = redstone_locations
-        self.different_colours = ['red', 'blue', 'green', 'orange', 'yellow', 'lightblue', 'cyan', 'lime', 'pink', 'magenta','purple', 'brown','light_gray','gray','white','black']
+        self.color_dict = {'A':'red', 'B':'blue', 'C':'green', 'D':'orange', 'E':'yellow', 
+                           'F':'lightblue', 'G':'cyan', 'H':'lime', 'I':'pink', 
+                           'J':'magenta', 'K':'purple', 'L':'brown','M':'light_gray',
+                           'N':'gray','O':'white','P':'black'}
         self.color_assignment = {}
         #hard coded the colors of the variables
         self.base_start = '''summon falling_block ~ ~1 ~ {BlockState:{Name:"redstone_block"},Time:1,Passengers:[{id:"falling_block",BlockState:{Name:"activator_rail"}}'''
@@ -24,18 +27,10 @@ class Circuit:
         self.barrier_material = 'smooth_stone'
         self.base_material = 'smooth_sandstone'
         
-        #apply colors to the levers
-        indexer = 0 
-        for modules in self.list_nodes: #assigns colors to levers
-            if modules.type == Operation.VAR:
-                if modules.var not in self.color_assignment and indexer < len(self.different_colours):
-                    self.color_assignment[modules.var] = self.different_colours[indexer]
-                    indexer += 1
-                #If we have more variables than colors we stop printing the levers with colors
-        
 
     def add_command(self, original_command, new_command):
-        added_command = f'id:command_block_minecart,Command:"{new_command}"'
+        #unsecured quotations
+        added_command = f'''{{id:command_block_minecart,Command:"{new_command}"}}'''
         original_command.append(added_command)
         return original_command
 
@@ -88,41 +83,47 @@ class Circuit:
 
 
         #placing the modules and levers
-        for modules in self.list_nodes:
-            if modules.type == Operation.NOT:
-                name = 'NOT'
-            elif modules.type == Operation.AND:
-                name = 'AND'
-            elif modules.type == Operation.OR:
-                name = 'OR'
-            elif modules.type == Operation.VAR: #position of levers
-                lever_code = f'''{{id:command_block_minecart,Command:"setblock ~{modules.position[0]} ~-2 ~{modules.position[1]-4} lever[face=floor,powered=false]"}}'''
-                command.append(lever_code)
+        
+        for node in self.list_nodes:
+            match node.type:
+                case Operation.NOT:
+                    name = 'NOT'
+                case Operation.AND:
+                    name = 'AND'
+                case Operation.OR:
+                    name = 'OR'
+                case Operation.VAR: #position of levers
+                    #compartmentalise levers too?
+                    lever_code = f"setblock ~{modules.position[0]} ~-2 ~{modules.position[1]-4} lever[face=floor,powered=false]"
+                    self.add_command(command, lever_code)
 
-                #placing variable colour
-                lever_color_code = f'''{{id:command_block_minecart,Command:"setblock ~{modules.position[0]} ~-3 ~{modules.position[1]-4} {self.color_assignment[modules.var]}_concrete"}}'''
-                command.append(lever_color_code)
+                    #placing variable colour
+                    lever_color_code = f"setblock ~{modules.position[0]} ~-3 ~{modules.position[1]-4} {self.color_assignment[modules.var]}_concrete"
+                    self.add_command(command, lever_color_code)
 
-                #placing lever names
-                if self.color_assignment[modules.var] == 'orange':
-                    lever_label = f'''{{id:command_block_minecart,Command:"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard:'center', text:{{bold:true, color:gold, text:'{modules.var}'}}}}"}}'''
-                    command.append(lever_label)
-                else:
-                    lever_label = f'''{{id:command_block_minecart,Command:"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard: 'center', text:{{bold:true, color:{self.color_assignment[modules.var]}, text:'{modules.var}'}}}}"}}'''
-                    command.append(lever_label)
-                continue
-            else:
-                continue
+                    #placing lever names
+                    if self.color_assignment[modules.var] == 'orange': #no orange text so we use gold, edge case
+                        orange_lever_label = f"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard:'center', text:{{bold:true, color:gold, text:'{modules.var}'}}}}"
+                        self.add_command(command, orange_lever_label)
+                    else:
+                        lever_label = f"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard: 'center', text:{{bold:true, color:{self.color_assignment[modules.var]}, text:'{modules.var}'}}}}"
+                        self.add_command(command, lever_label)
+                    continue
+
+                case _: #default case
+                    name = 'UNKNOWN' 
             
-            #actually placing the modules
-            code = f'''{{id:command_block_minecart,Command:"/summon armor_stand ~{modules.position[0]} ~-2 ~{modules.position[1]-4} {{Marker:1b,CustomName:\\"{name}\\",Tags:[placer]}}"}}'''
+            #actually placing the modules, using placement markers to reduce code and computation load
+            code = f'''/summon armor_stand ~{modules.position[0]} ~-2 ~{modules.position[1]-4} {{Marker:1b,CustomName:\\"{name}\\",Tags:[placer]}}'''
             command.append(code)
 
 
 
         #placing lantern
-        lantern_code = f'''{{id:command_block_minecart,Command:"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp"}},{{id:command_block_minecart,Command:"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"}}'''
-        command.append(lantern_code)
+        lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
+        redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
+        self.add_command(command, lantern_position)
+        self.add_command(command, redstone_to_lantern)
 
         # Given that the redstone wires are straight lines by design, it would
             # be optimal to replace the setblocks with fills, however, we do not
