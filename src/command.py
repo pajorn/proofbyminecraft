@@ -3,6 +3,88 @@ from nodes import *
 from position import *
 import arranger
 
+from enum import Enum
+
+class Direction(Enum):
+    UP = [0,0,-1]
+    DOWN = [0,0,1]
+    LEFT = [-1,0,0]
+    RIGHT = [1,0,0]
+    Y_UP = [0,1,0]
+    Y_DOWN = [0,-1,0]
+
+'''
+    Calculates the coordinates for a box with dimensions, z_width, x_width
+''' #create proper calculate fill
+def calculate_fill(z_width, y_pos, x_width):
+        return f"~{z_width//2} ~{y_pos} ~{x_width//2} ~-{z_width//2} ~{y_pos} ~-{x_width//2}"
+    
+def calculate_position(directions_list):
+    for steps in directions_list:
+        total_z = 0
+        total_y = 0
+        total_x = 0
+        total_z += steps[0]
+        total_y += steps[1]
+        total_x += steps[2]
+    final_coordinates = f"~{total_z} ~{total_y} ~{total_x}"
+    return final_coordinates
+
+class Component:
+    def __init__(self, directions_list, block):
+        self.position = calculate_position(directions_list)
+        self.code =  f"setblock {self.position} {block}"
+
+class Logic_Gate:
+    def __init__(self, color, base_length=3):
+        self.base = f"fill {calculate_fill(base_length, -1, base_length)} {color}_wool"
+        
+        
+class Not_Gate(Logic_Gate):
+    def __init__(self):
+        self.name = "NOT"
+        self.color = "red"
+        self.base_length = 3
+        super().__init__(self.color, self.base_length)
+        self.parts = [Component([],"red_wool"), Component([Direction.DOWN],"redstone_wire"), 
+                      Component([Direction.UP],"redstone_wall_torch[facing=north]")]
+
+class AND_Gate(Logic_Gate):
+    def __init__(self):
+        self.name ="AND"
+        self.color = "orange"
+        self.base_length = 3
+        super().__init__(self.color, self.base_length)
+        self.parts = [Component([Direction.UP], "redstone_wall_torch[facing=north]"),
+                      Component([],"orange_wool"), Component([Direction.LEFT],"orange_wool"),Component([Direction.RIGHT],"orange_wool"),
+                      Component([Direction.Y_UP],"redstone_wire"), Component([Direction.LEFT,Direction.Y_UP],"redstone_torch"),Component([Direction.RIGHT,Direction.Y_UP],"redstone_torch"),
+                      Component([Direction.DOWN,Direction.LEFT],"redstone_wire"), Component([Direction.DOWN,Direction.RIGHT],"redstone_wire")]
+
+class OR_Gate(Logic_Gate):
+    def __init__(self):
+        self.name = "OR"
+        self.color = "light_blue"
+        self.base_length = 3
+        super().__init__(self.color, self.base_length)
+        self.parts = [Component([Direction.UP], "redstone_wire"),
+                      Component([],"redstone_wire"), Component([Direction.LEFT],"light_blue_wool"),Component([Direction.RIGHT],"light_blue_wool"),
+                      Component([Direction.DOWN,Direction.LEFT],"repeater[facing=south]"), Component([Direction.DOWN,Direction.RIGHT],"repeater[facing=south]")]
+        
+def spawn_nodes(command_line):
+    gate_list = [Not_Gate, AND_Gate, OR_Gate]
+    for gates in gate_list: #For every type of circuit
+        base_code = f"execute at @e[type=armor_stand,name='{gates.name}'] run {gates.base}" #adding the base
+        add_command(command_line, base_code)
+        for components in gates.parts: #adding components
+            node_code = f"execute at @e[type=armor_stand,name='{gates.name}'] run {components.code}"
+            add_command(command_line, node_code)
+
+def add_command(original_command, new_command):
+        #unsecured quotations
+        added_command = f'''{{id:command_block_minecart,Command:"{new_command}"}}'''
+        original_command.append(added_command)
+        return original_command
+
 '''
 Holds all the logic gates and components, 
 denoting a full circuit with all its parts
@@ -19,20 +101,10 @@ class Circuit:
         self.color_assignment = {}
         #hard coded the colors of the variables
         self.base_start = '''summon falling_block ~ ~1 ~ {BlockState:{Name:"redstone_block"},Time:1,Passengers:[{id:"falling_block",BlockState:{Name:"activator_rail"}}'''
-        self.spawn_nodes = '''{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='NOT'] run fill ~1 ~-1 ~1 ~-1 ~-1 ~-1 red_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run fill ~1 ~-1 ~1 ~-1 ~-1 ~-1 light_blue_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run fill ~1 ~-1 ~1 ~-1 ~-1 ~-1 orange_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='NOT'] run setblock ~ ~-1 ~-1 minecraft:redstone_lamp"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='NOT'] run setblock ~ ~ ~ red_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='NOT'] run setblock ~ ~ ~-1 redstone_wall_torch[facing=north]"}, {id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='NOT'] run setblock ~ ~ ~1 redstone_wire"}, {id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run setblock ~-1 ~ ~1  repeater[facing=south]"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run setblock ~ ~-1 ~-1 minecraft:redstone_lamp"},
-{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run setblock ~1 ~ ~1 repeater[facing=south]"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run setblock ~-1 ~ ~1 repeater[facing=south]"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run fill ~1 ~ ~ ~-1 ~ ~ light_blue_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='OR'] run fill ~ ~ ~ ~ ~ ~-1 redstone_wire"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run setblock ~ ~-1 ~-1 minecraft:redstone_lamp"},
-{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run fill ~1 ~ ~ ~-1 ~ ~ orange_wool"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run setblock ~-1 ~ ~1 redstone_wire"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run setblock ~1 ~ ~1 redstone_wire"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run fill ~-1 ~1 ~ ~1 ~1 ~ redstone_torch"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run setblock ~ ~1 ~ redstone_wire"},{id:command_block_minecart,Command:"execute at @e[type=armor_stand,name='AND'] run setblock ~ ~ ~-1 redstone_wall_torch[facing=north]"}, {id:command_block_minecart,Command:"kill @e[type=armor_stand,tag=placer]"}'''
         self.base_end = '''{id:command_block_minecart,Command:"setblock ~ ~ ~1 command_block{Command:\\"fill ~ ~-1 ~-1 ~ ~ ~ air\\"}"},{id:command_block_minecart,Command:"setblock ~ ~-1 ~1 redstone_block"},{id:command_block_minecart,Command:"kill @e[type=command_block_minecart,distance=0..2]"}]}'''
         #choosing box materials
         self.barrier_material = 'smooth_stone'
         self.base_material = 'smooth_sandstone'
-        
-
-    def add_command(self, original_command, new_command):
-        #unsecured quotations
-        added_command = f'''{{id:command_block_minecart,Command:"{new_command}"}}'''
-        original_command.append(added_command)
-        return original_command
 
     def get_command(self, truth_table: bool = False, expr: str = ""):
         command = [self.base_start] #apply the starting of the command
@@ -53,7 +125,7 @@ class Circuit:
         #Displaying expression above
         center = ((right_most/2),(up_most/2))
         title = f"summon text_display ~{center[0]} ~2 ~{center[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[5f,5f,5f]}},billboard:\'center\',text:{{bold:true,color:white,text:\'{expr.strip()}\'}}}}"
-        self.add_command(command, title)
+        add_command(command, title)
 
         #find the rightmost node and add a gap since we are too stupid to arrage them largest to smallest
         #why only along the x direction?
@@ -73,9 +145,9 @@ class Circuit:
 
         #hardcoded barriers around circuits
         barrier = f"fill ~{left_most-1} ~-3 ~{up_most-5} ~{right_most+1} ~-3 ~{down_most-3} {self.barrier_material}"
-        self.add_command(command, barrier)
+        add_command(command, barrier)
         base = f"fill ~{left_most} ~-3 ~{up_most-4} ~{right_most} ~-3 ~{down_most-4} {self.base_material}"
-        self.add_command(command, base)
+        add_command(command, base)
 
         #get locations of maps and redstone wiring
         self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
@@ -95,19 +167,19 @@ class Circuit:
                 case Operation.VAR: #position of levers
                     #compartmentalise levers too?
                     lever_code = f"setblock ~{modules.position[0]} ~-2 ~{modules.position[1]-4} lever[face=floor,powered=false]"
-                    self.add_command(command, lever_code)
+                    add_command(command, lever_code)
 
                     #placing variable colour
                     lever_color_code = f"setblock ~{modules.position[0]} ~-3 ~{modules.position[1]-4} {self.color_assignment[modules.var]}_concrete"
-                    self.add_command(command, lever_color_code)
+                    add_command(command, lever_color_code)
 
                     #placing lever names
                     if self.color_assignment[modules.var] == 'orange': #no orange text so we use gold, edge case
                         orange_lever_label = f"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard:'center', text:{{bold:true, color:gold, text:'{modules.var}'}}}}"
-                        self.add_command(command, orange_lever_label)
+                        add_command(command, orange_lever_label)
                     else:
                         lever_label = f"summon text_display ~{modules.position[0]} ~-1.3 ~{modules.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard: 'center', text:{{bold:true, color:{self.color_assignment[modules.var]}, text:'{modules.var}'}}}}"
-                        self.add_command(command, lever_label)
+                        add_command(command, lever_label)
                     continue
 
                 case _: #default case
@@ -122,8 +194,8 @@ class Circuit:
         #placing lantern
         lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
         redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
-        self.add_command(command, lantern_position)
-        self.add_command(command, redstone_to_lantern)
+        add_command(command, lantern_position)
+        add_command(command, redstone_to_lantern)
 
         # Given that the redstone wires are straight lines by design, it would
             # be optimal to replace the setblocks with fills, however, we do not
@@ -139,12 +211,8 @@ class Circuit:
         for pos in self.redstone_locations[2]:
             command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} repeater[facing=east]"}}''')
         
+        spawn_nodes(command) #trigger construction of all components at markers
 
-
-        command.append(self.spawn_nodes)
-
-
-        
 
 
 
@@ -184,5 +252,3 @@ class Circuit:
         command = ",".join(command)
         
         return(command)
-
-
