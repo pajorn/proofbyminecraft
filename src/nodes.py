@@ -13,6 +13,7 @@ class Node:
         self.depth = 0 #number of parents to root
         self.level = 0 #testing maybe delete
         self.offset = 0 #set by SetOffset in level.py after a graph is made into list
+        #what is offset
 
     def __repr__(self):
         return f"Node(type={self.type}, var={self.var})"

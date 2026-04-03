@@ -88,28 +88,28 @@ class FOLe:
 
     #     return out
 
-    def _GetLocal(expr, idx):
+    def _GetLocal(expr:str, idx:int):
         """helper for OrderOper
 
             get the indicies for the local expression around
               a top operator
         """
-
+        #FIXME
         #backwards find left
         local_left = -1
         b = 0
-        for i in range(idx-1, -1, -1):
+        for i in range(idx-1, -1, -1): #check all characters before
             if expr[i] == ")":
                 b += 1
             elif expr[i] == "(":
                 b -= 1
 
-            if b == 0:
-                if expr[i] in ['^', 'v'] or i == 0:
+            if b == 0: #If theres an even number of brackets before that character
+                if expr[i] in ['^', 'v'] or i == 0: 
                     local_left = i+1 if expr[i] in ['^', 'v'] else i
                     break
         if local_left == -1:
-            local_left = 0
+            local_left = 0  #Takes the whole left bool next to it, whether it's A or ((AvB)^C)
 
 
         #forwards find right
@@ -131,8 +131,11 @@ class FOLe:
         return (local_left, local_right)
 
     
-    def _AddBrackets(expr, left, right) -> str:
+    def _AddBrackets(expr:str, left:int, right:int) -> str:
         """
+        left = position of '(' 
+        right = position of ')' 
+
         returns the expression with the brackets heh lol
         'a^bvc'
         and: [1]
@@ -154,48 +157,53 @@ class FOLe:
     def OrderOper(expr: str) -> str:
         """
         Precedence
-
         ensure the LHS' become the RHS'
 
         avb^c = av(b^c)
         a^bvc = (a^b)vc
         (a^b)^(b)v(c) = ((a^b)^(b)) v (c)
         
-        1. get list of top level op indicies
+        Group expressions into brackets so we can tell the order of operations
+
+        Redundant outer brackets
+        ((AvB)) -> (AvB)
+
+        Not-Redundant
+        (AvB)^(CvD) -> AvB)^(CvD 
         """
 
-        b = 0
-        not_idx = []
-        for i, c in enumerate(expr):
-            if c == "(":
-                b += 1
-            elif c == ")":
-                b -= 1
+        brackets = 0
+        NOT_idx = []
+        for index, character in enumerate(expr):
+            if character == "(":
+                brackets += 1
+            elif character == ")":
+                brackets -= 1
 
-            if b == 0 and c == "~":
-                not_idx.append(i)
+            if brackets == 0 and character == "~": #Get all ~s in () or ~()
+                NOT_idx.append(index)
         
-        for i in reversed(not_idx):
-            left, right = FOLe._GetLocal(expr, i)
+        for idx in reversed(NOT_idx): #Get the expression the ~ is in
+            left, right = FOLe._GetLocal(expr, idx)
             #expr = FOLe._AddBrackets(expr, left, right)
-            if not (left > 0 and expr[left - 1] == '(' and right < 
-                    len(expr) and expr[right] ==')'):
+            if not (left > 0 and expr[left - 1] == '(' and  #add brackets to the expression if it doesn't have yet
+                    right < len(expr) and expr[right] ==')'):
                 expr = FOLe._AddBrackets(expr, left, right)
 
-        b = 0
-        idx = []
-        for i, c in enumerate(expr):
-            if c == "(":
-                b += 1
-            elif c == ")":
-                b -= 1
+        brackets = 0
+        OP_idx = []
+        for index, character in enumerate(expr):
+            if character == "(":
+                brackets += 1
+            elif character == ")":
+                brackets -= 1
 
-            if b == 0 and c in ["^", "v"]:
-                idx.append(i)
+            if brackets == 0 and character in ["^", "v"]:
+                OP_idx.append(index)
         
-        for i in (idx):
+        for i in (OP_idx):
             left, right = FOLe._GetLocal(expr, i)
-            expr = FOLe._AddBrackets(expr, left, right)
+            expr = FOLe._AddBrackets(expr, left, right) #add brackets to the expression around the operator
 
         # b = 0
         # or_idx = []
@@ -212,22 +220,23 @@ class FOLe:
         #     left, right = FOLe._GetLocal(expr, i)
         #     expr = FOLe._AddBrackets(expr, left, right)
 
-        if len(expr) > 0 and expr[0] == '(' and expr[-1] == ')':
+        if len(expr) > 0 and expr[0] == '(' and expr[-1] == ')': #check if there are redundant brackets around the whole expression
             p_count = 0
-            is_redundent = True
-            for i, c in enumerate(expr):
-                if i == 0 or i == len(expr) - 1:
+            is_redundent = True 
+            for i, character in enumerate(expr):
+                if i == 0 or i == len(expr) - 1: #ignore redundant brackets
                     continue
-                if c == '(':
+
+                if character == '(':
                     p_count += 1
-                elif c == ')':
+                elif character == ')':
                     p_count -= 1
-                if p_count < 0:
+                if p_count < 0: #if it ever started with a ), which is a non-redundant case
                     is_redundent = False
                     break
             
-            if is_redundent and p_count == 0:
-                return expr[1:-1]
+            if is_redundent and p_count == 0: 
+                return expr[1:-1] #remove redundant brackets around the whole expression
             
         return expr
         
@@ -236,6 +245,16 @@ class FOLe:
         """
         Return a list containing the operation and the operand(s).
         Length will either be 2 or 3 depending on operand count.
+
+        Seperate the operations and put them in a list
+        Only works with:
+        (expr1){operator}(expr2) -> ['{operator}', 'expr1', 'expr2']
+        ((expr1)v(expr2)){operator}(expr3) -> ['{operator}', '(expr1)v(expr2)', 'expr3']
+
+        '~' is grouped with their corresponding expr
+        ~(variable) -> ['~', 'variable']
+        ~(expr1){operator}(expr2) -> ['{operator}', '~expr1', 'expr2']
+
         """
 
         # TODO: consider the edge case of not
@@ -251,10 +270,9 @@ class FOLe:
                 bracket_count += 1
             elif expr[i] == ")":
                 bracket_count -= 1
-            
             # bracket_count must not be negative implies more ) than (
             assert bracket_count >= 0
-
+            
             if bracket_count == 0 and expr[i] in ["^", "v"]:
                 out = []
                 # Append the operator
@@ -268,12 +286,13 @@ class FOLe:
 
                 # Append the second operator
                 if expr[i+1] == "(" and expr[-1] == ")":
-                    out.append(expr[i+2:-1])
+                    out.append(expr[i+2:-1]) #FIXME i+1?
                 else:
                     out.append(expr[i+1:])
                 
                 return out
-            elif bracket_count == 0 and expr[i] == "~":
+            
+            elif bracket_count == 0 and expr[i] == "~": #form ~(AvB)
                 out = []
                 # Append the operator
                 out.append(expr[i])
@@ -286,7 +305,12 @@ class FOLe:
                 
                 return out
 
+    '''
+    Checks if the expressions contains any operations
 
+    'AvB' -> True
+    'A' -> False
+    '''
     def ContainsOperation(expr: str) -> bool:
         for operator in FOLe.operators:
             if operator in expr:
@@ -342,4 +366,12 @@ edge1 = "a v b"
 
 # print(f"test1: {FOLe.BracketBlock(test1)}, test2: {FOLe.BracketBlock(test2)}")
 # print([test1[i[0]:i[1]] for i in FOLe.BracketBlock(test1)])
+
+if __name__ == "__main__":
+    surroundings = FOLe._GetLocal("(AvB)",1)
+    print(surroundings)
+    #for i in range(len("AvB")):
+    #    print(i)
+    #operation_list = FOLe.SubstringOperation("~(AvB)vD")
+    #print(operation_list)
 

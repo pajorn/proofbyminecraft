@@ -22,7 +22,7 @@ from nodes import *
 #     return
 
 
-def GetLctn(node):
+def GetLctn(node): #not used
     """return the an (x,y) coordinate tuple of a node
         TODO
     """
@@ -30,17 +30,17 @@ def GetLctn(node):
     return out
 
 #TODO the setting stuff better
-def SetLevels(nodes: list[Node]):
+def SetLevels(nodes: list[Node]): #the offset of each node is it's position in the list
     for i in range(len(nodes)):
         nodes[i].offset = i
-    pass
+    pass 
 
 def SetOffset(nodes: list[Node]):
     """
     takes list of nodes and then sets their offsets from left to right
     """
     for node in nodes:
-        node.offset = nodes.index(node)
+        node.offset = nodes.index(node) #offset of each node is the first place the node appears in the list
     pass
 
 def PostT(node):
@@ -52,9 +52,9 @@ def PostT(node):
 
     out = []
     if node == None:
-        return out
+        return out #If no nodes, just return the empty list
 
-    out.extend(PostT(node.left))
+    out.extend(PostT(node.left)) #add the children to out
     out.extend(PostT(node.right))
 
     # if hasattr(node, 'var') and node.var is not None:
@@ -62,9 +62,9 @@ def PostT(node):
     # elif hasattr(node, 'type'):
     #     out.append(node.type)
     if node:
-        out.append(node)
+        out.append(node) #finally append the actual node to 'out'
     else:
-        out.append(None)
+        out.append(None) #redundant check since it can't be empty
 
     return out
 
@@ -97,12 +97,13 @@ def GetLevel(node):
     """
 
     child_level = [] #levels of the children
-    if node is None: #base case?
+    if node is None: #base case? Because the default is none? Error protection?
         return 0
-
-    if node.type == Operation.VAR: #if it variable then return 0
+    
+    if node.type == Operation.VAR: #if it variable then return 0, must be the bottom level
         return 0
-    if node.left:
+    
+    if node.left: #recursive
         child_level.append(GetLevel(node.left)) # get level left child
     if node.right:
         child_level.append(GetLevel(node.right)) # get level right child
