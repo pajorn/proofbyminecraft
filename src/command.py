@@ -26,7 +26,7 @@ class Direction(tuple, Enum):
     calculate_fill(3,0,3) -> ~1 ~0 ~1 ~-1 ~0 ~-1
     calculate_fill(5,-1,5) -> ~2 ~-1 ~2 ~-2 ~-1 ~-2
 ''' #create proper calculate fill
-def calculate_fill(z_width, y_pos, x_width):
+def calculate_fill(z_width:int, y_pos:int, x_width:int)-> str:
         return f"~{z_width//2} ~{y_pos} ~{x_width//2} ~-{z_width//2} ~{y_pos} ~-{x_width//2}"
     
 '''
@@ -49,7 +49,7 @@ def calculate_fill(z_width, y_pos, x_width):
     | DOWN+LEFT |  DOWN | DOWN+RIGHT|
     ---------------------------------
 '''    
-def calculate_position(directions_list):
+def calculate_position(directions_list:list[object])->str:
     total_z = 0
     total_y = 0
     total_x = 0
@@ -62,7 +62,7 @@ def calculate_position(directions_list):
 
 class Component: #each redstone block
     '''
-    Defines the Position and type of Block on the circuit
+    Defines the Position and type of Block each logicgate
 
     Component([Direction.UP], "redstone_repeater")
     Component([], "wool")
@@ -76,7 +76,7 @@ class Component: #each redstone block
     --------------------------------
     '''
     
-    def __init__(self, directions_list, block):
+    def __init__(self, directions_list:list[object], block:str):
         self.position = calculate_position(directions_list)
         self.code =  f"setblock {self.position} {block}"
 
@@ -89,7 +89,7 @@ class Logic_Gate:
     baselength = wedith of the square base
     name = name of circuit
     '''
-    def __init__(self, color=None, base_length=3, name=None):
+    def __init__(self, color:str=None, base_length:int=3, name:str=None):
         self.name = name
         self.color = color
         self.base_length = base_length
@@ -131,7 +131,6 @@ class Circuit:
                            'F':'lightblue', 'G':'cyan', 'H':'lime', 'I':'pink', 
                            'J':'magenta', 'K':'purple', 'L':'brown','M':'light_gray',
                            'N':'gray','O':'white','P':'black'}
-        self.color_assignment = {}
         #hard coded the colors of the variables
         self.base_start = '''summon falling_block ~ ~1 ~ {BlockState:{Name:"redstone_block"},Time:1,Passengers:[{id:"falling_block",BlockState:{Name:"activator_rail"}}'''
         self.base_end = '''{id:command_block_minecart,Command:"setblock ~ ~ ~1 command_block{Command:\\"fill ~ ~-1 ~-1 ~ ~ ~ air\\"}"},{id:command_block_minecart,Command:"setblock ~ ~-1 ~1 redstone_block"},{id:command_block_minecart,Command:"kill @e[type=command_block_minecart,distance=0..2]"}]}'''
@@ -139,7 +138,7 @@ class Circuit:
         self.barrier_material = 'smooth_stone'
         self.base_material = 'smooth_sandstone'
 
-    def spawn_nodes(self, command_line):
+    def spawn_nodes(self, command_line:str)->str:
         '''
         Spawns the actual circuits at the markers
 
@@ -167,7 +166,7 @@ class Circuit:
         original_command.append(added_command)
         return original_command
 
-    def bounding_box(self, node_list):
+    def bounding_box(self, node_list:list[object]):
         '''
         Gives the ranges of the bounding box of the circuit and 
         the center coordinate as a tuple
@@ -188,7 +187,7 @@ class Circuit:
         #stupid hardcoded way of finding the bounding box
         #FIXME
     
-    def add_title_equation(self, command, expr, position):
+    def add_title_equation(self, command:str, expr:str, position:tuple[int,int]):
         '''
         Adds the equation of the expression on top of the circuit
         '''
@@ -196,7 +195,8 @@ class Circuit:
         title = f"summon text_display ~{position[0]} ~{y_position} ~{position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[5f,5f,5f]}},billboard:\'center\',text:{{bold:true,color:white,text:\'{expr.strip()}\'}}}}"
         self.add_command(command, title)
 
-    def add_circuit_base(self, command, left_most, right_most, up_most, down_most, base_material, border_material):
+    def add_circuit_base(self, command:str, left_most:int, right_most:int, 
+                         up_most:int, down_most:int, base_material:str, border_material:str) -> str:
         '''
         Adds the base of the circuit and its border
         '''
@@ -207,6 +207,44 @@ class Circuit:
         self.add_command(command, base)
         return command
 
+    def add_markers(self, command:str, node_list:list[object]) -> str:
+        offset_down = -4
+
+        for nodes in node_list:
+            match nodes.type:
+                case Operation.NOT:
+                    name = 'NOT'
+                case Operation.AND:
+                    name = 'AND'
+                case Operation.OR:
+                    name = 'OR'
+                case Operation.VAR: #position of levers
+                    #compartmentalise levers too?
+                    lever_code = f"setblock ~{nodes.position[0]} ~-2 ~{nodes.position[1]+offset_down} lever[face=floor,powered=false]"
+                    self.add_command(command, lever_code)
+
+                    #placing variable colour
+                    lever_color_code = f"setblock ~{nodes.position[0]} ~-3 ~{nodes.position[1]+offset_down} {self.color_dict[nodes.var]}_concrete"
+                    self.add_command(command, lever_color_code)
+                    
+
+                    #placing lever names
+                    if self.color_dict[nodes.var] == 'orange': #no orange text so we use gold, edge case
+                        orange_lever_label = f"summon text_display ~{nodes.position[0]} ~-1.3 ~{nodes.position[1]+offset_down} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard:'center', text:{{bold:true, color:gold, text:'{nodes.var}'}}}}"
+                        self.add_command(command, orange_lever_label)
+                    else: 
+                        lever_label = f"summon text_display ~{nodes.position[0]} ~-1.3 ~{nodes.position[1]+offset_down} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard: 'center', text:{{bold:true, color:{self.color_dict[nodes.var]}, text:'{nodes.var}'}}}}"
+                        self.add_command(command, lever_label)
+                    continue
+
+                case _: #default case
+                    name = 'UNKNOWN' 
+            
+            #actually placing the nodes, using placement markers to reduce code and computation load
+            #offset down by 4, shoudl probably this at an earlier state FIXME
+            code = f'''/summon armor_stand ~{nodes.position[0]} ~-2 ~{nodes.position[1]+offset_down} {{Marker:1b,CustomName:\\"{name}\\",Tags:[placer]}}'''
+            self.add_command(command, code)
+        return command
 
     def get_command(self, truth_table: bool = False, expr: str = ""):
         command = [self.base_start] #apply the starting of the command
@@ -235,69 +273,42 @@ class Circuit:
 
         #hardcoded barriers around circuits
         self.add_circuit_base(command, left_most, right_most, 
-                              up_most, down_most, self.barrier_material, self.base_material)
+                              up_most, down_most, self.base_material, self.barrier_material)
         
 
         #get locations of maps and redstone wiring
+        #Conflicts with initial injection to the Circuit object
         self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
         self.lamp_position = (self.lamp_position[0], self.lamp_position[1])
 
-
+        self.add_markers(command,self.list_nodes)
         #placing the circuits and levers
-        for nodes in self.list_nodes:
-            match nodes.type:
-                case Operation.NOT:
-                    name = 'NOT'
-                case Operation.AND:
-                    name = 'AND'
-                case Operation.OR:
-                    name = 'OR'
-                case Operation.VAR: #position of levers
-                    #compartmentalise levers too?
-                    lever_code = f"setblock ~{nodes.position[0]} ~-2 ~{nodes.position[1]-4} lever[face=floor,powered=false]"
-                    self.add_command(command, lever_code)
-
-                    #placing variable colour
-                    lever_color_code = f"setblock ~{nodes.position[0]} ~-3 ~{nodes.position[1]-4} {self.color_assignment[nodes.var]}_concrete"
-                    self.add_command(command, lever_color_code)
-
-                    #placing lever names
-                    if self.color_assignment[nodes.var] == 'orange': #no orange text so we use gold, edge case
-                        orange_lever_label = f"summon text_display ~{nodes.position[0]} ~-1.3 ~{nodes.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard:'center', text:{{bold:true, color:gold, text:'{nodes.var}'}}}}"
-                        self.add_command(command, orange_lever_label)
-                    else:
-                        lever_label = f"summon text_display ~{nodes.position[0]} ~-1.3 ~{nodes.position[1]-4} {{transformation:{{left_rotation:[0f,0f,0f,1f], right_rotation:[0f,0f,0f,1f], translation:[0f,0f,0f], scale:[1.7f,1.7f,1.7f]}},billboard: 'center', text:{{bold:true, color:{self.color_assignment[nodes.var]}, text:'{nodes.var}'}}}}"
-                        self.add_command(command, lever_label)
-                    continue
-
-                case _: #default case
-                    name = 'UNKNOWN' 
-            
-            #actually placing the nodes, using placement markers to reduce code and computation load
-            code = f'''/summon armor_stand ~{nodes.position[0]} ~-2 ~{nodes.position[1]-4} {{Marker:1b,CustomName:\\"{name}\\",Tags:[placer]}}'''
-            self.add_command(command, code)
-
+        
         #placing lantern
         lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
         redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
         self.add_command(command, lantern_position)
         self.add_command(command, redstone_to_lantern)
 
+        print(self.redstone_locations)
         # Given that the redstone wires are straight lines by design, it would
             # be optimal to replace the setblocks with fills, however, we do not
             # have time.
         for pos in self.redstone_locations[0]:
             command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} redstone_wire"}}''')
+            print('set redstone')
             
         # Place up facing repeaters
         for pos in self.redstone_locations[1]:
             command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} repeater[facing=south]"}}''')
-            
+            print('set repeaters')
+
         # Place left facing repeaters
         for pos in self.redstone_locations[2]:
             command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} repeater[facing=east]"}}''')
         
-        command = self.spawn_nodes(command) #trigger construction of all components at markers
+        self.spawn_nodes(command) #trigger construction of all components at markers
+        
 
 
         if truth_table:

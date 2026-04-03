@@ -3,6 +3,7 @@ from nodes import Node, Operation
 from worldgen import*
 from arranger import Arranger
 from command import *
+import traceback
 
 def ValidInput(expr) -> bool:
     if len(expr) < 3: #must have at least 2 variables and an operand to be a valid boolean equation
@@ -34,5 +35,6 @@ def process_input(expr, truth_table: bool = False) -> str:
         circuit = Circuit(nodes, (root.position[0], root.position[1]-2), Arranger.ArrangeRedstone(nodes))
         out = circuit.get_command(truth_table, expr)
     except Exception as e:
+        traceback.print_exc()
         return f'processing error: {e}'
     return out

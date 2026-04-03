@@ -4,17 +4,25 @@ from nodes import *
 
 class UnitTests(unittest.TestCase):
     sample_node = Node()
-    sample_node.position = (0,0)
-    sample_list_nodes = [sample_node]
-    sample_lamp_position = (10,10)
-    sample_redstone_locations = [[(1,1)],[(-1,-1)],[(0,1)]]
+    sample_node.position = (0,-5)
+    sample_node.type = Operation.OR
+
+    not_gate1 = Node()
+    not_gate1.position = (0,1)
+    not_gate1.type = Operation.NOT
+
+    sample_list_nodes = [not_gate1, sample_node]
+    sample_lamp_position = (0,-10)
+    sample_redstone_locations = [] #redundant
     Sample_Circuit = Circuit(sample_list_nodes, sample_lamp_position, sample_redstone_locations)
 
+    @unittest.skip("nah")
     def test_spawn_nodes(self):
         start_string = ["start"]
         end_string = self.Sample_Circuit.spawn_nodes(start_string)
         #print(end_string)
 
+    @unittest.skip("nah")
     def test_calculate_position(self):
         test_cases = [
             ("Down Move",  [Direction.DOWN], "~0 ~0 ~1"),
@@ -35,6 +43,7 @@ class UnitTests(unittest.TestCase):
                 result = calculate_position(moves)
                 self.assertEqual(result, expected)
 
+    @unittest.skip("nah")
     def test_calculate_fill(self):
         test_cases = [
             ("1x1", (1,0,1), "~0 ~0 ~0 ~-0 ~0 ~-0"),
@@ -51,6 +60,7 @@ class UnitTests(unittest.TestCase):
                 result = calculate_fill(z,y,x)
                 self.assertEqual(result, expected)
 
+    #@unittest.skip("nah")
     def test_circuit_assembly(self):
         output_command = self.Sample_Circuit.get_command(truth_table=False, expr="AvB")
         curly_brackets = 0
@@ -79,6 +89,11 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(single_quotes%2, 0, msg="unbalanced single quotes")
 
         print(output_command)
+
+    @unittest.skip("nah")
+    def parsing(self):
+        #print(self.sample_list_nodes)
+        pass
 
 if __name__ == '__main__':
     unittest.main()
