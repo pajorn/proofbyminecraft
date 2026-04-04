@@ -60,6 +60,59 @@ def calculate_position(directions_list:list[object])->str:
     final_coordinates = f"~{total_z} ~{total_y} ~{total_x}"
     return final_coordinates
 
+def divide_into_columns(points):
+    common_axis_x = {} #list[lines], list[points]
+    common_axis_z = {}
+    for pt in points: #group all points by common axis
+        if not pt[0] in common_axis_x: #create a dictionary entry for each x and z that has a pos
+            common_axis_x[pt[0]] = [pt]
+        elif not pt in common_axis_x[pt[0]]: #avoid dupes
+            common_axis_x[pt[0]].append(pt)
+
+        if not pt[1] in common_axis_z:
+            common_axis_z[pt[1]] = [pt]
+        elif not pt in common_axis_z[pt[1]]:
+            common_axis_z[pt[1]].append(pt)
+    return common_axis_x, common_axis_z
+
+def connected_to_lines(points, axis):
+    '''
+    Positions in a column
+    '''
+    axis_idx = 0 if axis=="x" else 1 if axis=="z" else None
+    
+    flat_list = []
+    in_a_line = []
+    for pt in points: #list of all z positions
+        flat_list.append(pt[axis_idx])
+
+    for pt in points: #if has in front or behind/ if has neighbour -> add
+        if (pt[axis_idx] + 1) in flat_list:
+            in_a_line.append(pt[axis_idx])
+        elif (pt[axis_idx] - 1) in flat_list: #only checks if next one is consecutive, should be if any exists in the list
+            in_a_line.insert(0, pt[axis_idx])
+    return in_a_line
+
+def find_start_and_end(points):
+    '''
+    for points that we know are in a line
+    Gets the start and end of everyline in the column
+    '''
+    start_places = [points[0]] #make sure theres something there
+    end_places = []
+    #get the starting position of every line, is also the number of lines on that axis
+    for idx, n in enumerate(points): 
+        if idx != 0 and (n - 1) != points[idx-1] :
+            start_places.append(n)
+
+        elif idx != (len(points)-1) and (n + 1) != points[idx+1]:
+            end_places.append(n)
+
+    end_places.append(points[-1])
+
+    assert(len(start_places) == len(end_places))
+    return start_places, end_places
+
 def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] | list[tuple[int,int]]:
     '''
     Calculates where there lines in a matrix of points
@@ -86,121 +139,51 @@ def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] |
     Z_ends: [2, 7]
     lines: [[[(0, 0), (0, 2)], [(0, 5), (0, 7)]], [[(14, 1)], [(17, 6)]]]
     '''
-    common_axis_x = {} #list[lines], list[points]
-    common_axis_z = {}
-    for pt in points: #group all points by common axis
-        if not pt[0] in common_axis_x: #create a dictionary entry for each x and z that has a pos
-            common_axis_x[pt[0]] = [pt]
-        else:
-            common_axis_x[pt[0]].append(pt)
-
-        if not pt[1] in common_axis_z:
-            common_axis_z[pt[1]] = [pt]
-        else:
-            common_axis_z[pt[1]].append(pt)
+    common_axis_x, common_axis_z = divide_into_columns(points)
     
     lines_list = []
     points_only = []
-    not_in_a_line_x = []
-    not_in_a_line_z = []
+    in_a_line_x = []
+    in_a_line_z = []
+
     for key, pt_list in common_axis_x.items():
         if len(pt_list) > 1: #if its a column and not just a point
-            in_a_line_z = []
-            z_list = []
+            in_a_line = connected_to_lines(pt_list, axis="z")
             
-            for pt in pt_list: #list of all z positions
-                z_list.append(pt[1])
-
-            for pt in pt_list: #if has in front or behind/ if has neighbour -> add
-                if (pt[1] + 1) in z_list:
-                    in_a_line_z.append(pt[1])
-                elif (pt[1] - 1) in z_list: #only checks if next one is consecutive, should be if any exists in the list
-                    in_a_line_z.insert(0, pt[1])
-            
-            if len(in_a_line_z)>1: #if there exists a line on that column
-                in_a_line_z = sorted(in_a_line_z)
-
-                z_start_places = [in_a_line_z[0]] #make sure theres something there
-                z_end_places = []
-                #get the starting position of every line, is also the number of lines on that axis
-                for idx, z in enumerate(in_a_line_z): 
-                    if idx != 0 and (z - 1) != in_a_line_z[idx-1] :
-                        z_start_places.append(z)
-
-                    elif idx != (len(in_a_line_z)-1) and (z + 1) != in_a_line_z[idx+1]:
-                        z_end_places.append(z)
-
-                z_end_places.append(in_a_line_z[-1])
+            if len(in_a_line) > 1: #if there exists a line on that column
+                in_a_line = sorted(in_a_line)
+                for c in in_a_line:
+                    in_a_line_z.append((key,c))
 
                 #add the position of the start and end of every line
-                for i in range(len(z_start_places)): 
-                    lines_list.append([(key ,z_start_places[i]),(key ,z_end_places[i])])
-        
-                for pt in pt_list: #add solo points, 
-                    if not pt[1] in in_a_line_z:
-                        not_in_a_line_z.append(pt)
-
-        else: #maybe extend as we are added a full list, no other things on their axis
-            not_in_a_line_z.append(pt_list[0]) 
+                start_places, end_places = find_start_and_end(in_a_line)
+                
+                #find borders for every line
+                for i in range(len(start_places)): 
+                    lines_list.append([(key ,start_places[i]),(key ,end_places[i])])
 
 
     for key, pt_list in common_axis_z.items():
-        if len(pt_list) > 1:
-            in_a_line_x = []
-            x_list = []
+        if len(pt_list) > 1: #if its a column and not just a point
+            in_a_line = connected_to_lines(pt_list, axis="x")
             
-            for pt in pt_list: #list of all z positions
-                x_list.append(pt[0])
-            
+            if len(in_a_line) > 1: #if there exists a line on that column
+                in_a_line = sorted(in_a_line)
+                for c in in_a_line:
+                    in_a_line_x.append((c,key))
 
-            for pt in pt_list: #if has in front or behind/ if has neighbour -> add
-                if (pt[0] + 1) in x_list:
-                    in_a_line_x.append(pt[0])
-                elif (pt[0] - 1) in x_list: #only checks if next one is consecutive, should be if any exists in the list
-                    in_a_line_x.insert(0, pt[0])
-            
-            if len(in_a_line_x)>1:
-                in_a_line_x = sorted(in_a_line_x)
-
-                x_start_places = [in_a_line_x[0]] #make sure theres something there
-                x_end_places = []
-                #get the starting position of every line, is also the number of lines on that axis
-                for idx, x in enumerate(in_a_line_x): 
-                    if idx != 0 and (x - 1) != in_a_line_x[idx-1] :
-                        x_start_places.append(x)
-
-                    elif idx != (len(in_a_line_x)-1) and (x + 1) != in_a_line_x[idx+1]:
-                        x_end_places.append(x)
-                x_end_places.append(in_a_line_x[-1])
-            
-
-                #add the position of the  start and end of every line
-                for i in range(len(x_start_places)): 
-                    lines_list.append([(x_start_places[i], key),(x_end_places[i], key)])
-        
-                for pt in pt_list: #add solo points, 
-                    if not pt[0] in in_a_line_x:
-                        not_in_a_line_x.append(pt)
-
-        else: #maybe extend as we are added a full list, no other things on their axis
-            not_in_a_line_x.append(pt_list[0]) 
-
-    #print("common_axis_x:")
-    #print(common_axis_x)
-    #print("common_axis_z:")
-    #print(common_axis_z)
-    #print(f"\nHas common x: {pt_list}")
-    #print(f"\nz_list: {x_list}")
-    #print(f"\nSorted In_a_line: {in_a_line_z}")
-    #print(f"\nZ_starts: {z_start_places}")
-    #print(f"\nZ_ends: {z_end_places}")
-    #print(f"not_in_a_line_x: {not_in_a_line_x}")
-    #print(f"not_in_a_line_z: {not_in_a_line_z}")
-    for pt in points: #no common x or z with anything
-        if (pt in not_in_a_line_x) and (pt in not_in_a_line_z):
+                #add the position of the start and end of every line
+                start_places, end_places = find_start_and_end(in_a_line)
+                
+                #find borders for every line
+                for i in range(len(start_places)): 
+                    lines_list.append([(start_places[i], key),(end_places[i], key)])
+ 
+    for pt in points: #make sure it isn't being used by either
+        if (not pt in in_a_line_x) and (not pt in in_a_line_z):
             points_only.append(pt)
-
-    return lines_list,points_only
+    
+    return lines_list, points_only
 
 class Component: #each redstone block
     '''
@@ -504,8 +487,18 @@ class Circuit:
         command = ",".join(command)
         return(command)
 
-if __name__ == "__main__" and False:
+if __name__ == "__main__":
     sample_lines = [(1,0),(2,0),(3,0),
-                    (7,1),(7,2),(7,0),
-                    (7,12)]
+                    (102,206), (12,0)]
+    #sample_array = [0,1,2,3,4,5,6,8,9,435,436]
     print(f"lines: {calculate_lines(sample_lines)}")
+    #common_axis_x, common_axis_z = divide_into_columns(sample_lines)
+    #print("common_axis_x:")
+    #print(common_axis_x)
+    #print("common_axis_z:")
+    #print(common_axis_z)
+    #in_a_line = connected_to_lines(sample_lines, axis="z")
+    #print(in_a_line)
+    #start, end = find_start_and_end(sample_array)
+    #print(start)
+    #print(end)
