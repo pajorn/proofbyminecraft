@@ -92,7 +92,7 @@ def do_shit(expr, truth_table=False):
     
     nodes = Arranger.ArrangeGates(root)
     
-    circuit = command.Circuit(nodes, (root.position[0], root.position[1]-2), Arranger.ArrangeRedstone(nodes))
+    circuit = command.Circuit(nodes, (root.position[0], root.position[1]-2))
     print(circuit.get_command(truth_table))
 
 if __name__ == "__main__" and False:

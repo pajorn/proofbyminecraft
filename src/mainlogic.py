@@ -29,10 +29,12 @@ def ValidInput(expr) -> bool:
 def process_input(expr, truth_table: bool = False) -> str:
     """This function processes the text passed to it and returns command
     for gui shit."""
+    #TODO better error handling with more informative error messages
+    # Unequal brackets, foreign objects, double operands vv, empty expr
     try:
         root = FOLe.CreateGraph(expr.strip())
         nodes = Arranger.ArrangeGates(root) 
-        circuit = Circuit(nodes, (root.position[0], root.position[1]-2), Arranger.ArrangeRedstone(nodes))
+        circuit = Circuit(nodes, (root.position[0], root.position[1]-2))
         out = circuit.get_command(truth_table, expr)
     except Exception as e:
         traceback.print_exc()

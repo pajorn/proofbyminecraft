@@ -60,6 +60,145 @@ def calculate_position(directions_list:list[object])->str:
     final_coordinates = f"~{total_z} ~{total_y} ~{total_x}"
     return final_coordinates
 
+def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] | list[tuple[int,int]]:
+    '''
+    Calculates where there lines in a matrix of points
+    Returns: list of lines, [starting position, ending position]
+            & Points that arent connected to lines
+    Example:
+    sample_lines = [(0,1),(0,0),(0,2),
+                    (0,5),(0,6),(0,7),
+                    (14,1),(17,6)]
+
+    common_axis_x:
+    {0: [(0, 1), (0, 0), (0, 2), (0, 5), (0, 6), (0, 7)], 14: [(14, 1)], 17: [(17, 6)]}
+    common_axis_z:
+    {1: [(0, 1), (14, 1)], 0: [(0, 0)], 2: [(0, 2)], 5: [(0, 5)], 6: [(0, 6), (17, 6)], 7: [(0, 7)]}
+
+    Has common x: [(0, 1), (0, 0), (0, 2), (0, 5), (0, 6), (0, 7)]
+
+    z_list: [1, 0, 2, 5, 6, 7]
+
+    Sorted In_a_line: [0, 1, 2, 5, 6, 7]
+
+    Z_starts: [0, 5]
+
+    Z_ends: [2, 7]
+    lines: [[[(0, 0), (0, 2)], [(0, 5), (0, 7)]], [[(14, 1)], [(17, 6)]]]
+    '''
+    common_axis_x = {} #list[lines], list[points]
+    common_axis_z = {}
+    for pt in points: #group all points by common axis
+        if not pt[0] in common_axis_x: #create a dictionary entry for each x and z that has a pos
+            common_axis_x[pt[0]] = [pt]
+        else:
+            common_axis_x[pt[0]].append(pt)
+
+        if not pt[1] in common_axis_z:
+            common_axis_z[pt[1]] = [pt]
+        else:
+            common_axis_z[pt[1]].append(pt)
+    
+    lines_list = []
+    points_only = []
+    not_in_a_line_x = []
+    not_in_a_line_z = []
+    for key, pt_list in common_axis_x.items():
+        if len(pt_list) > 1:
+            in_a_line_z = []
+            z_list = []
+            
+            for pt in pt_list: #list of all z positions
+                z_list.append(pt[1])
+
+            for pt in pt_list: #if has in front or behind/ if has neighbour -> add
+                if (pt[1] + 1) in z_list:
+                    in_a_line_z.append(pt[1])
+                elif (pt[1] - 1) in z_list: #only checks if next one is consecutive, should be if any exists in the list
+                    in_a_line_z.insert(0, pt[1])
+            
+            in_a_line_z = sorted(in_a_line_z)
+
+            z_start_places = [in_a_line_z[0] if in_a_line_z else None] #make sure theres something there
+            z_end_places = []
+            #get the starting position of every line, is also the number of lines on that axis
+            for idx, z in enumerate(in_a_line_z): 
+                if idx != 0 and (z - 1) != in_a_line_z[idx-1] :
+                    z_start_places.append(z)
+
+                elif idx != (len(in_a_line_z)-1) and (z + 1) != in_a_line_z[idx+1]:
+                    z_end_places.append(z)
+            z_end_places.append(in_a_line_z[-1])
+
+            #add the position of the  start and end of every line
+            for i in range(len(z_start_places)): 
+                lines_list.append([(key ,z_start_places[i]),(key ,z_end_places[i])])
+        
+            for pt in pt_list: #add solo points, 
+                if not pt[1] in in_a_line_z:
+                    not_in_a_line_z.append(pt)
+
+        else: #maybe extend as we are added a full list, no other things on their axis
+            not_in_a_line_z.append(pt_list[0]) 
+
+
+    for key, pt_list in common_axis_z.items():
+        if len(pt_list) > 1:
+            in_a_line_x = []
+            x_list = []
+            
+            for pt in pt_list: #list of all z positions
+                x_list.append(pt[0])
+            
+
+            for pt in pt_list: #if has in front or behind/ if has neighbour -> add
+                if (pt[0] + 1) in x_list:
+                    in_a_line_x.append(pt[0])
+                elif (pt[0] - 1) in x_list: #only checks if next one is consecutive, should be if any exists in the list
+                    in_a_line_x.insert(0, pt[0])
+            
+            in_a_line_x = sorted(in_a_line_x)
+
+            x_start_places = [in_a_line_x[0] if in_a_line_x else None] #make sure theres something there
+            x_end_places = []
+            #get the starting position of every line, is also the number of lines on that axis
+            for idx, x in enumerate(in_a_line_x): 
+                if idx != 0 and (x - 1) != in_a_line_x[idx-1] :
+                    x_start_places.append(x)
+
+                elif idx != (len(in_a_line_x)-1) and (x + 1) != in_a_line_x[idx+1]:
+                    x_end_places.append(x)
+            x_end_places.append(in_a_line_x[-1])
+            
+
+            #add the position of the  start and end of every line
+            for i in range(len(x_start_places)): 
+                lines_list.append([(x_start_places[i], key),(x_end_places[i], key)])
+        
+            for pt in pt_list: #add solo points, 
+                if not pt[0] in in_a_line_x:
+                    not_in_a_line_x.append(pt)
+
+        else: #maybe extend as we are added a full list, no other things on their axis
+            not_in_a_line_x.append(pt_list[0]) 
+
+    #print("common_axis_x:")
+    #print(common_axis_x)
+    #print("common_axis_z:")
+    #print(common_axis_z)
+    #print(f"\nHas common x: {pt_list}")
+    #print(f"\nz_list: {x_list}")
+    #print(f"\nSorted In_a_line: {in_a_line_z}")
+    #print(f"\nZ_starts: {z_start_places}")
+    #print(f"\nZ_ends: {z_end_places}")
+    #print(f"not_in_a_line_x: {not_in_a_line_x}")
+    #print(f"not_in_a_line_z: {not_in_a_line_z}")
+    for pt in points: #no common x or z with anything
+        if (pt in not_in_a_line_x) and (pt in not_in_a_line_z):
+            points_only.append(pt)
+
+    return lines_list,points_only
+
 class Component: #each redstone block
     '''
     Defines the Position and type of Block each logicgate
@@ -122,11 +261,13 @@ Holds all the logic gates and components,
 denotes a full circuit with all its parts
 '''
 class Circuit:  
-    def __init__(self, list_nodes:list[object], lamp_position: tuple[int,int], 
-                 redstone_locations: list[list[tuple[int, int]]] = [[], [], []]):
+    '''
+    Denotes a full build/circuit. Redstone lines are determined 
+    by the position of logic gates.
+    '''
+    def __init__(self, list_nodes:list[object], lamp_position: tuple[int,int]):
         self.list_nodes = list_nodes
         self.lamp_position = lamp_position
-        self.redstone_locations = redstone_locations
         self.color_dict = {'A':'red', 'B':'blue', 'C':'green', 'D':'orange', 'E':'yellow', 
                            'F':'lightblue', 'G':'cyan', 'H':'lime', 'I':'pink', 
                            'J':'magenta', 'K':'purple', 'L':'brown','M':'light_gray',
@@ -208,6 +349,12 @@ class Circuit:
         return command
 
     def add_markers(self, command:str, node_list:list[object]) -> str:
+        '''
+        Goes through the node list and places their corresponding markers 
+        at their listed position
+
+        Possible nodes: AND, OR, NOT, variables
+        '''
         offset_down = -4
 
         for nodes in node_list:
@@ -245,6 +392,32 @@ class Circuit:
             code = f'''/summon armor_stand ~{nodes.position[0]} ~-2 ~{nodes.position[1]+offset_down} {{Marker:1b,CustomName:\\"{name}\\",Tags:[placer]}}'''
             self.add_command(command, code)
         return command
+    
+    def set_redstone_wires(self, command:str, redstone_locations:list[tuple[int,int]]) -> str:
+        '''
+        Sets the positions of the redstone wires and repeater between circuits.
+        '''
+        # Given that the redstone wires are straight lines by design, it would
+            # be optimal to replace the setblocks with fills, however, we do not
+            # have time.
+        offset = -4
+        
+        lines, points = calculate_lines(redstone_locations[0])
+        print(f"lines: {lines}, \npoints: {points}")
+
+        for pos in points:
+            command = self.add_command(command, f"setblock ~{pos[0]} ~-2 ~{pos[1]+offset} redstone_wire")
+        for ln in lines: #[line[position1(x,z),position2(x,z]]
+            command = self.add_command(command, f"fill ~{ln[0][0]} ~-2 ~{ln[0][1]+offset} ~{ln[1][0]} ~-2 ~{ln[1][1]+offset} redstone_wire")
+
+
+        # Place up facing repeaters
+        for pos in redstone_locations[1]:
+            self.add_command(command, f"setblock ~{pos[0]} ~-2 ~{pos[1]+offset} repeater[facing=south]")
+        # Place left facing repeaters
+        for pos in redstone_locations[2]:
+            self.add_command(command, f"setblock ~{pos[0]} ~-2 ~{pos[1]+offset} repeater[facing=east]")
+        return command
 
     def get_command(self, truth_table: bool = False, expr: str = ""):
         command = [self.base_start] #apply the starting of the command
@@ -255,61 +428,46 @@ class Circuit:
         #Displaying expression above
         self.add_title_equation(command, expr, center)
 
-        #find the rightmost node and add a gap since we are too stupid to arrage them largest to smallest
-        #why only along the x direction?
+        #hardcoded barriers around circuits
+        self.add_circuit_base(command, left_most, right_most, 
+                              up_most, down_most, self.base_material, self.barrier_material)
+    
+        #get locations of maps and redstone wiring
+        #Conflicts with initial injection to the Circuit object FIXME
+        self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
+        self.lamp_position = (self.lamp_position[0], self.lamp_position[1])
+
+        #sets markers for the gates and variables
+        self.add_markers(command,self.list_nodes)
+        
+        #placing lantern TODO
+        lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
+        redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
+        self.add_command(command, lantern_position)
+        self.add_command(command, redstone_to_lantern)
+
+        #set wiring needed
+        self.set_redstone_wires(command, self.redstone_locations)
+        
+        #trigger construction of all components at their markers
+        self.spawn_nodes(command) 
+        
+        #spacing for the truth table, in x direction only, 
+        # works weirdly because we use clone for truth tables TODO
         rightmost_x = 0
         for node in self.list_nodes:
             if node.position[0] > rightmost_x:
                 rightmost_x = node.position[0]
         offset_x = rightmost_x + 3
 
-        #finding the levers which are on and off for the truth table
+        #finding the levers which are on and off for the truth table, 
+        # cloning step out of order FIXME
         vars = {}
         for node in self.list_nodes:
             if node.var:
                 vars[node.var] = False
         
         vars = dict(sorted(vars.items()))
-
-        #hardcoded barriers around circuits
-        self.add_circuit_base(command, left_most, right_most, 
-                              up_most, down_most, self.base_material, self.barrier_material)
-        
-
-        #get locations of maps and redstone wiring
-        #Conflicts with initial injection to the Circuit object
-        self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
-        self.lamp_position = (self.lamp_position[0], self.lamp_position[1])
-
-        self.add_markers(command,self.list_nodes)
-        #placing the circuits and levers
-        
-        #placing lantern
-        lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
-        redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
-        self.add_command(command, lantern_position)
-        self.add_command(command, redstone_to_lantern)
-
-        print(self.redstone_locations)
-        # Given that the redstone wires are straight lines by design, it would
-            # be optimal to replace the setblocks with fills, however, we do not
-            # have time.
-        for pos in self.redstone_locations[0]:
-            command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} redstone_wire"}}''')
-            print('set redstone')
-            
-        # Place up facing repeaters
-        for pos in self.redstone_locations[1]:
-            command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} repeater[facing=south]"}}''')
-            print('set repeaters')
-
-        # Place left facing repeaters
-        for pos in self.redstone_locations[2]:
-            command.append(f'''{{id:command_block_minecart,Command:"setblock ~{pos[0]} ~-2 ~{pos[1]-4} repeater[facing=east]"}}''')
-        
-        self.spawn_nodes(command) #trigger construction of all components at markers
-        
-
 
         if truth_table:
             structure_x = abs(right_most-left_most)+3
@@ -346,6 +504,7 @@ class Circuit:
         return(command)
 
 if __name__ == "__main__" and False:
-    start_string = ["start"]
-    end_string = spawn_nodes(start_string)
-    print(end_string)
+    sample_lines = [(1,0),(2,0),(3,0),
+                    (7,1),(7,2),(7,0),
+                    (7,12)]
+    print(f"lines: {calculate_lines(sample_lines)}")

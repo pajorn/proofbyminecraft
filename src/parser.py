@@ -94,7 +94,7 @@ class FOLe:
             get the indicies for the local expression around
               a top operator
         """
-        #FIXME
+        #FIXME works really weirdly
         #backwards find left
         local_left = -1
         b = 0
@@ -165,11 +165,12 @@ class FOLe:
         
         Group expressions into brackets so we can tell the order of operations
 
-        Redundant outer brackets
+        TODO make it remove any number of redundant brackets ((((AvB))))
+        Redundant outer brackets 
         ((AvB)) -> (AvB)
 
         Not-Redundant
-        (AvB)^(CvD) -> AvB)^(CvD 
+        (AvB)^(CvD) -> AvB)^(CvD  
         """
 
         brackets = 0

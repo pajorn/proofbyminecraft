@@ -3,8 +3,8 @@ from enum import Enum
 class Node:
     def __init__(self):
         self.parent: Node = None
-        self.left: Node | str = None
-        self.right: Node | str = None
+        self.left: Node | str = None #left child
+        self.right: Node | str = None #right child
 
         self.type: Operation = None
         self.var: str | None = None #var types have str data
