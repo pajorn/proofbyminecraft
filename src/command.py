@@ -104,7 +104,7 @@ def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] |
     not_in_a_line_x = []
     not_in_a_line_z = []
     for key, pt_list in common_axis_x.items():
-        if len(pt_list) > 1:
+        if len(pt_list) > 1: #if its a column and not just a point
             in_a_line_z = []
             z_list = []
             
@@ -117,26 +117,28 @@ def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] |
                 elif (pt[1] - 1) in z_list: #only checks if next one is consecutive, should be if any exists in the list
                     in_a_line_z.insert(0, pt[1])
             
-            in_a_line_z = sorted(in_a_line_z)
+            if len(in_a_line_z)>1: #if there exists a line on that column
+                in_a_line_z = sorted(in_a_line_z)
 
-            z_start_places = [in_a_line_z[0] if in_a_line_z else None] #make sure theres something there
-            z_end_places = []
-            #get the starting position of every line, is also the number of lines on that axis
-            for idx, z in enumerate(in_a_line_z): 
-                if idx != 0 and (z - 1) != in_a_line_z[idx-1] :
-                    z_start_places.append(z)
+                z_start_places = [in_a_line_z[0]] #make sure theres something there
+                z_end_places = []
+                #get the starting position of every line, is also the number of lines on that axis
+                for idx, z in enumerate(in_a_line_z): 
+                    if idx != 0 and (z - 1) != in_a_line_z[idx-1] :
+                        z_start_places.append(z)
 
-                elif idx != (len(in_a_line_z)-1) and (z + 1) != in_a_line_z[idx+1]:
-                    z_end_places.append(z)
-            z_end_places.append(in_a_line_z[-1])
+                    elif idx != (len(in_a_line_z)-1) and (z + 1) != in_a_line_z[idx+1]:
+                        z_end_places.append(z)
 
-            #add the position of the  start and end of every line
-            for i in range(len(z_start_places)): 
-                lines_list.append([(key ,z_start_places[i]),(key ,z_end_places[i])])
+                z_end_places.append(in_a_line_z[-1])
+
+                #add the position of the start and end of every line
+                for i in range(len(z_start_places)): 
+                    lines_list.append([(key ,z_start_places[i]),(key ,z_end_places[i])])
         
-            for pt in pt_list: #add solo points, 
-                if not pt[1] in in_a_line_z:
-                    not_in_a_line_z.append(pt)
+                for pt in pt_list: #add solo points, 
+                    if not pt[1] in in_a_line_z:
+                        not_in_a_line_z.append(pt)
 
         else: #maybe extend as we are added a full list, no other things on their axis
             not_in_a_line_z.append(pt_list[0]) 
@@ -157,27 +159,28 @@ def calculate_lines(points:list[tuple[int,int]]) -> list[list[tuple[int,int]]] |
                 elif (pt[0] - 1) in x_list: #only checks if next one is consecutive, should be if any exists in the list
                     in_a_line_x.insert(0, pt[0])
             
-            in_a_line_x = sorted(in_a_line_x)
+            if len(in_a_line_x)>1:
+                in_a_line_x = sorted(in_a_line_x)
 
-            x_start_places = [in_a_line_x[0] if in_a_line_x else None] #make sure theres something there
-            x_end_places = []
-            #get the starting position of every line, is also the number of lines on that axis
-            for idx, x in enumerate(in_a_line_x): 
-                if idx != 0 and (x - 1) != in_a_line_x[idx-1] :
-                    x_start_places.append(x)
+                x_start_places = [in_a_line_x[0]] #make sure theres something there
+                x_end_places = []
+                #get the starting position of every line, is also the number of lines on that axis
+                for idx, x in enumerate(in_a_line_x): 
+                    if idx != 0 and (x - 1) != in_a_line_x[idx-1] :
+                        x_start_places.append(x)
 
-                elif idx != (len(in_a_line_x)-1) and (x + 1) != in_a_line_x[idx+1]:
-                    x_end_places.append(x)
-            x_end_places.append(in_a_line_x[-1])
+                    elif idx != (len(in_a_line_x)-1) and (x + 1) != in_a_line_x[idx+1]:
+                        x_end_places.append(x)
+                x_end_places.append(in_a_line_x[-1])
             
 
-            #add the position of the  start and end of every line
-            for i in range(len(x_start_places)): 
-                lines_list.append([(x_start_places[i], key),(x_end_places[i], key)])
+                #add the position of the  start and end of every line
+                for i in range(len(x_start_places)): 
+                    lines_list.append([(x_start_places[i], key),(x_end_places[i], key)])
         
-            for pt in pt_list: #add solo points, 
-                if not pt[0] in in_a_line_x:
-                    not_in_a_line_x.append(pt)
+                for pt in pt_list: #add solo points, 
+                    if not pt[0] in in_a_line_x:
+                        not_in_a_line_x.append(pt)
 
         else: #maybe extend as we are added a full list, no other things on their axis
             not_in_a_line_x.append(pt_list[0]) 
@@ -272,7 +275,7 @@ class Circuit:
                            'F':'lightblue', 'G':'cyan', 'H':'lime', 'I':'pink', 
                            'J':'magenta', 'K':'purple', 'L':'brown','M':'light_gray',
                            'N':'gray','O':'white','P':'black'}
-        #hard coded the colors of the variables
+        #hard coded the colors of the variables, TODO Bruh its case sensitive
         self.base_start = '''summon falling_block ~ ~1 ~ {BlockState:{Name:"redstone_block"},Time:1,Passengers:[{id:"falling_block",BlockState:{Name:"activator_rail"}}'''
         self.base_end = '''{id:command_block_minecart,Command:"setblock ~ ~ ~1 command_block{Command:\\"fill ~ ~-1 ~-1 ~ ~ ~ air\\"}"},{id:command_block_minecart,Command:"setblock ~ ~-1 ~1 redstone_block"},{id:command_block_minecart,Command:"kill @e[type=command_block_minecart,distance=0..2]"}]}'''
         #choosing box materials
@@ -431,21 +434,18 @@ class Circuit:
         #hardcoded barriers around circuits
         self.add_circuit_base(command, left_most, right_most, 
                               up_most, down_most, self.base_material, self.barrier_material)
-    
-        #get locations of maps and redstone wiring
-        #Conflicts with initial injection to the Circuit object FIXME
-        self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
-        self.lamp_position = (self.lamp_position[0], self.lamp_position[1])
 
         #sets markers for the gates and variables
         self.add_markers(command,self.list_nodes)
         
-        #placing lantern TODO
+        #placing lantern
         lantern_position = f'''setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-5} redstone_lamp'''
         redstone_to_lantern =f"setblock ~{self.lamp_position[0]} ~-2 ~{self.lamp_position[1]-4} redstone_wire"
         self.add_command(command, lantern_position)
         self.add_command(command, redstone_to_lantern)
 
+        #get locations of maps and redstone wiring
+        self.redstone_locations = arranger.Arranger.ArrangeRedstone(self.list_nodes)
         #set wiring needed
         self.set_redstone_wires(command, self.redstone_locations)
         
@@ -453,7 +453,8 @@ class Circuit:
         self.spawn_nodes(command) 
         
         #spacing for the truth table, in x direction only, 
-        # works weirdly because we use clone for truth tables TODO
+        # works weirdly because we use structure blocks for truth tables TODO
+        #Change to clone cause tick delay is messing timing up
         rightmost_x = 0
         for node in self.list_nodes:
             if node.position[0] > rightmost_x:
@@ -461,16 +462,15 @@ class Circuit:
         offset_x = rightmost_x + 3
 
         #finding the levers which are on and off for the truth table, 
-        # cloning step out of order FIXME
         vars = {}
         for node in self.list_nodes:
             if node.var:
-                vars[node.var] = False
+                vars[node.var] = False #sets all variables to false?
         
-        vars = dict(sorted(vars.items()))
+        vars = dict(sorted(vars.items())) #sorts variabes alphabetically
 
         if truth_table:
-            structure_x = abs(right_most-left_most)+3
+            structure_x = abs(right_most-left_most)+3 #command block savig command
             structure_y = abs(up_most - down_most)+3
             structure_block_save = f'''{{id:command_block_minecart,Command:"setblock ~{left_most-1} ~3 ~{up_most-5} structure_block[mode=save]{{name:'module',posX:0,posY:-6,posZ:0,sizeX:{structure_x},sizeY:5,sizeZ:{structure_y},rotation:'NONE',mirror:'NONE',mode:'SAVE',ignoreEntities:0b,showboundingbox:1b}} replace"}},{{id:command_block_minecart,Command:"setblock ~{left_most-1} ~4 ~{up_most-5} redstone_block"}}'''
             structure_block_break = f'''{{id:command_block_minecart,Command:"fill ~{left_most-1} ~3 ~{up_most-5} ~{left_most-1} ~4 ~{up_most-5} air"}}'''
@@ -489,12 +489,13 @@ class Circuit:
                 structure_x = abs(right_most-left_most)+3
                 structure_y = abs(up_most - down_most)+3
                 structure_block_load = f'''{{id:command_block_minecart,Command:"setblock ~{left_most-1} ~-2 ~{up_most-5} structure_block[mode=load]{{name:'module',posX:0,posY:-1,posZ:0,sizeX:{structure_x},sizeY:5,sizeZ:{structure_y},rotation:'NONE',mirror:'NONE',mode:'LOAD',ignoreEntities:0b,showboundingbox:1b}} replace"}},{{id:command_block_minecart,Command:"setblock ~{left_most-1} ~-1 ~{up_most-5} redstone_block"}}'''
-                command.extend([structure_block_load])
+                command.append(structure_block_load)
 
                 #placing truth tables levers
                 for nodes in self.list_nodes:
                     if nodes.type == Operation.VAR: 
                         lever_powered = vars[nodes.var]
+                        print(lever_powered)
                         lever_powered_string = "true" if lever_powered else "false"
                         lever_code_table = f'''{{id:command_block_minecart,Command:"setblock ~{nodes.position[0]} ~-2 ~{nodes.position[1]-4} lever[face=floor,powered={lever_powered_string}]"}}'''
                         command.append(lever_code_table)
