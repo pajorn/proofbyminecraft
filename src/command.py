@@ -487,11 +487,11 @@ class Circuit:
         command = ",".join(command)
         return(command)
 
-if __name__ == "__main__":
-    sample_lines = [(1,0),(2,0),(3,0),
-                    (102,206), (12,0)]
+#if __name__ == "__main__" and False:
+    #sample_lines = [(1,0),(2,0),(3,0),
+    #                (102,206), (12,0)]
     #sample_array = [0,1,2,3,4,5,6,8,9,435,436]
-    print(f"lines: {calculate_lines(sample_lines)}")
+    #print(f"lines: {calculate_lines(sample_lines)}")
     #common_axis_x, common_axis_z = divide_into_columns(sample_lines)
     #print("common_axis_x:")
     #print(common_axis_x)
